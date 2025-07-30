@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ModeToggle } from "./components/mode-toggle";
 import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
 
 type Unit = "yard" | "meter";
 
@@ -27,21 +28,11 @@ export const App: React.FC = () => {
     { ...defaultComponent },
   ]);
 
-  // Helper: format angka sesuai "id-ID"
-  const formatNumber = (num: number, decimalDigits = 0) => {
-    if (num === 0) return "";
-    return num.toLocaleString("id-ID", {
-      minimumFractionDigits: decimalDigits,
-      maximumFractionDigits: decimalDigits,
-    });
-  };
-
-  // Helper: parse string input (bisa berupa "1.234,56") jadi number
-  const parseNumber = (str: string) => {
-    const cleaned = str.replace(/\./g, "").replace(/,/g, ".");
-    const n = parseFloat(cleaned);
-    return isNaN(n) ? 0 : n;
-  };
+  // State untuk RND Cost dan Settings
+  const [rndCost, setRndCost] = useState<number>(125000);
+  const [quantity, setQuantity] = useState<number>(100);
+  const [markupPercent, setMarkupPercent] = useState<number>(2);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // Konversi ke meter (1 yard = 1.1 meter)
   const toMeter = (amount: number, unit: Unit) =>
@@ -63,8 +54,18 @@ export const App: React.FC = () => {
     .map((c) => subtotal(c))
     .reduce((acc, curr) => acc + curr, 0);
 
-  // HPP + 2%
-  const hppPlus2 = totalHpp * 1.02;
+  // Biaya RND = Total HPP - Biaya Sewing Komponen Utama + RND Cost
+  const biayaRnd =
+    totalHpp > 0
+      ? (totalHpp - (components[0]?.sewingCost || 0) + rndCost) / quantity
+      : 0;
+
+  // HPP + markup% = (Total HPP + Biaya RND) x markup% + Total HPP
+  const hpp = totalHpp > 0 ? (totalHpp + biayaRnd) * (markupPercent / 100) : 0;
+
+  const ppn = totalHpp > 0 ? (totalHpp + biayaRnd) * (10 / 100) + hpp : 0;
+
+  const finalprice = totalHpp + biayaRnd + hpp + ppn;
 
   // Tambah satu komponen baru (defaultComponent)
   const addComponent = () => {
@@ -91,8 +92,84 @@ export const App: React.FC = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Calculator Baju
           </h1>
-          <ModeToggle />
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowSettings(!showSettings)}
+              variant="outline"
+              size="sm"
+              className="h-9"
+            >
+              ⚙️ Settings
+            </Button>
+            <ModeToggle />
+          </div>
         </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <section className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-card-foreground">
+              Pengaturan
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-muted-foreground">
+                  RND Cost (Rp)
+                </label>
+                <Input
+                  type="number"
+                  placeholder="125000"
+                  value={rndCost || ""}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    setRndCost(value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Biaya tambahan untuk RND yang akan ditambahkan ke perhitungan
+                  Biaya RND
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Quantity
+                </label>
+                <Input
+                  type="number"
+                  placeholder="100"
+                  value={quantity || ""}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    setQuantity(value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Jumlah produk yang akan dihitung untuk RND Cost. Misalnya,
+                  jika Anda ingin menghitung biaya per 100 baju, masukkan 100.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Markup Percent (%)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="2"
+                  value={markupPercent || ""}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    setMarkupPercent(value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Persentase markup yang akan ditambahkan ke total HPP dan Biaya
+                  RND
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {components.map((inputs, idx) => {
           // Judul section:
@@ -126,18 +203,15 @@ export const App: React.FC = () => {
                   <label className="block text-sm font-medium text-muted-foreground">
                     Kebutuhan Kain
                   </label>
-                  <div className="flex rounded-lg overflow-hidden border border-input bg-background">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className="flex-1 bg-transparent px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      placeholder="0,00"
-                      // Tampilkan dua desimal; kalau 0 → tampilkan ""
-                      value={formatNumber(inputs.amount, 2)}
+                  <div className="flex rounded-lg overflow-hidden border border-input bg-background items-center">
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      className="border-0 rounded-none focus-visible:ring-0"
+                      value={inputs.amount || ""}
                       onChange={(e) => {
-                        const raw = e.target.value;
-                        const parsed = parseNumber(raw);
-                        updateComponent(idx, { amount: parsed });
+                        const value = parseFloat(e.target.value) || 0;
+                        updateComponent(idx, { amount: value });
                       }}
                     />
                     <select
@@ -160,16 +234,13 @@ export const App: React.FC = () => {
                   <label className="block text-sm font-medium text-muted-foreground">
                     Harga Kain (per meter)
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  <Input
+                    type="number"
                     placeholder="0"
-                    value={formatNumber(inputs.pricePerMeter, 0)}
+                    value={inputs.pricePerMeter || ""}
                     onChange={(e) => {
-                      const raw = e.target.value;
-                      const parsed = parseNumber(raw);
-                      updateComponent(idx, { pricePerMeter: parsed });
+                      const value = parseFloat(e.target.value) || 0;
+                      updateComponent(idx, { pricePerMeter: value });
                     }}
                   />
                 </div>
@@ -179,16 +250,13 @@ export const App: React.FC = () => {
                   <label className="block text-sm font-medium text-muted-foreground">
                     Biaya Pengiriman (Rp)
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  <Input
+                    type="number"
                     placeholder="0"
-                    value={formatNumber(inputs.shippingCost, 0)}
+                    value={inputs.shippingCost || ""}
                     onChange={(e) => {
-                      const raw = e.target.value;
-                      const parsed = parseNumber(raw);
-                      updateComponent(idx, { shippingCost: parsed });
+                      const value = parseFloat(e.target.value) || 0;
+                      updateComponent(idx, { shippingCost: value });
                     }}
                   />
                 </div>
@@ -198,16 +266,13 @@ export const App: React.FC = () => {
                   <label className="block text-sm font-medium text-muted-foreground">
                     Biaya Sewing (Rp)
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  <Input
+                    type="number"
                     placeholder="0"
-                    value={formatNumber(inputs.sewingCost, 0)}
+                    value={inputs.sewingCost || ""}
                     onChange={(e) => {
-                      const raw = e.target.value;
-                      const parsed = parseNumber(raw);
-                      updateComponent(idx, { sewingCost: parsed });
+                      const value = parseFloat(e.target.value) || 0;
+                      updateComponent(idx, { sewingCost: value });
                     }}
                   />
                 </div>
@@ -272,7 +337,7 @@ export const App: React.FC = () => {
         {/* ====== Summary ====== */}
         <section className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border border-border rounded-xl p-6 space-y-6">
           <h2 className="text-2xl font-bold text-center">Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-card border border-border rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground mb-2">
                 Total HPP (Semua Komponen)
@@ -286,10 +351,46 @@ export const App: React.FC = () => {
               </p>
             </div>
             <div className="bg-card border border-border rounded-lg p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-2">HPP + 2%</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Biaya RND untuk {quantity} pcs
+              </p>
+              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                Rp{" "}
+                {biayaRnd.toLocaleString("id-ID", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                HPP {markupPercent}% (Total HPP + Biaya RND)
+              </p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 Rp{" "}
-                {hppPlus2.toLocaleString("id-ID", {
+                {hpp.toLocaleString("id-ID", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                PPN 10% (Total HPP + Biaya RND + HPP)
+              </p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                Rp{" "}
+                {ppn.toLocaleString("id-ID", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">FInal Price</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                Rp{" "}
+                {finalprice.toLocaleString("id-ID", {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
                 })}
