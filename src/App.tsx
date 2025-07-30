@@ -32,6 +32,7 @@ export const App: React.FC = () => {
   const [rndCost, setRndCost] = useState<number>(125000);
   const [quantity, setQuantity] = useState<number>(100);
   const [markupPercent, setMarkupPercent] = useState<number>(2);
+  const [taxPercent, setTaxPercent] = useState<number>(10);
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // Konversi ke meter (1 yard = 1.1 meter)
@@ -63,7 +64,8 @@ export const App: React.FC = () => {
   // HPP + markup% = (Total HPP + Biaya RND) x markup% + Total HPP
   const hpp = totalHpp > 0 ? (totalHpp + biayaRnd) * (markupPercent / 100) : 0;
 
-  const ppn = totalHpp > 0 ? (totalHpp + biayaRnd) * (10 / 100) + hpp : 0;
+  const ppn =
+    totalHpp > 0 ? (totalHpp + biayaRnd) * (taxPercent / 100) + hpp : 0;
 
   const finalprice = totalHpp + biayaRnd + hpp + ppn;
 
@@ -111,7 +113,7 @@ export const App: React.FC = () => {
             <h2 className="text-lg font-semibold text-card-foreground">
               Pengaturan
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-muted-foreground">
                   RND Cost (Rp)
@@ -165,6 +167,24 @@ export const App: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   Persentase markup yang akan ditambahkan ke total HPP dan Biaya
                   RND
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Tax Percent (%)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="10"
+                  value={taxPercent || ""}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    setTaxPercent(value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Persentase pajak (PPN) yang akan ditambahkan ke perhitungan
                 </p>
               </div>
             </div>
@@ -376,7 +396,7 @@ export const App: React.FC = () => {
             </div>
             <div className="bg-card border border-border rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground mb-2">
-                PPN 10% (Total HPP + Biaya RND + HPP)
+                PPN {taxPercent}% (Total HPP + Biaya RND + HPP)
               </p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 Rp{" "}
