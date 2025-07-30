@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { ModeToggle } from "./components/mode-toggle";
+import { Button } from "./components/ui/button";
 
 type Unit = "yard" | "meter";
 
@@ -82,183 +84,220 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-8">
-      <h1 className="text-2xl font-semibold">Calculator Baju</h1>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        {/* Header with theme toggle */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Calculator Baju
+          </h1>
+          <ModeToggle />
+        </div>
 
-      {components.map((inputs, idx) => {
-        // Judul section:
-        const title = idx === 0 ? "Komponen Utama" : `Tambahan Kain ${idx}`;
+        {components.map((inputs, idx) => {
+          // Judul section:
+          const title = idx === 0 ? "Komponen Utama" : `Tambahan Kain ${idx}`;
 
-        return (
-          <section
-            key={idx}
-            className="border rounded-lg p-4 space-y-4 relative"
-          >
-            {/* Header dengan tombol Hapus (jika idx > 0) */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-medium">{title}</h2>
-              {idx > 0 && (
-                <button
-                  onClick={() => removeComponent(idx)}
-                  className="text-red-600 hover:text-red-800 text-sm font-medium"
-                >
-                  Hapus
-                </button>
-              )}
-            </div>
+          return (
+            <section
+              key={idx}
+              className="bg-card border border-border rounded-xl p-6 space-y-6 shadow-sm hover:shadow-md transition-shadow relative"
+            >
+              {/* Header dengan tombol Hapus (jika idx > 0) */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-card-foreground">
+                  {title}
+                </h2>
+                {idx > 0 && (
+                  <Button
+                    onClick={() => removeComponent(idx)}
+                    variant="destructive"
+                    size="sm"
+                    className="h-8"
+                  >
+                    Hapus
+                  </Button>
+                )}
+              </div>
 
-            <div className="grid grid-cols-1 gap-2">
-              {/* ====== Kebutuhan Kain ====== */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Kebutuhan Kain
-                </label>
-                <div className="flex">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* ====== Kebutuhan Kain ====== */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Kebutuhan Kain
+                  </label>
+                  <div className="flex rounded-lg overflow-hidden border border-input bg-background">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      className="flex-1 bg-transparent px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="0,00"
+                      // Tampilkan dua desimal; kalau 0 → tampilkan ""
+                      value={formatNumber(inputs.amount, 2)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const parsed = parseNumber(raw);
+                        updateComponent(idx, { amount: parsed });
+                      }}
+                    />
+                    <select
+                      className="bg-muted/50 border-l border-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      value={inputs.unit}
+                      onChange={(e) =>
+                        updateComponent(idx, {
+                          unit: e.target.value as Unit,
+                        })
+                      }
+                    >
+                      <option value="yard">Yard</option>
+                      <option value="meter">Meter</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ====== Harga Kain per Meter ====== */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Harga Kain (per meter)
+                  </label>
                   <input
                     type="text"
                     inputMode="decimal"
-                    className="w-2/3 border rounded-l px-3 py-2"
-                    placeholder="0,00"
-                    // Tampilkan dua desimal; kalau 0 → tampilkan ""
-                    value={formatNumber(inputs.amount, 2)}
+                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0"
+                    value={formatNumber(inputs.pricePerMeter, 0)}
                     onChange={(e) => {
                       const raw = e.target.value;
                       const parsed = parseNumber(raw);
-                      updateComponent(idx, { amount: parsed });
+                      updateComponent(idx, { pricePerMeter: parsed });
                     }}
                   />
-                  <select
-                    className="w-1/3 border-l-0 border rounded-r px-2"
-                    value={inputs.unit}
-                    onChange={(e) =>
-                      updateComponent(idx, {
-                        unit: e.target.value as Unit,
-                      })
-                    }
-                  >
-                    <option value="yard">Yard</option>
-                    <option value="meter">Meter</option>
-                  </select>
+                </div>
+
+                {/* ====== Biaya Pengiriman ====== */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Biaya Pengiriman (Rp)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0"
+                    value={formatNumber(inputs.shippingCost, 0)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const parsed = parseNumber(raw);
+                      updateComponent(idx, { shippingCost: parsed });
+                    }}
+                  />
+                </div>
+
+                {/* ====== Biaya Sewing ====== */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Biaya Sewing (Rp)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className="w-full bg-background border border-input rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0"
+                    value={formatNumber(inputs.sewingCost, 0)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const parsed = parseNumber(raw);
+                      updateComponent(idx, { sewingCost: parsed });
+                    }}
+                  />
                 </div>
               </div>
 
-              {/* ====== Harga Kain per Meter ====== */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Harga Kain (per meter)
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                  value={formatNumber(inputs.pricePerMeter, 0)}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = parseNumber(raw);
-                    updateComponent(idx, { pricePerMeter: parsed });
-                  }}
-                />
+              {/* ====== Ringkasan Perhitungan Komponen ====== */}
+              <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                <h3 className="font-medium text-muted-foreground mb-3">
+                  Ringkasan Perhitungan
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">
+                      Kebutuhan dalam meter:
+                    </span>
+                    <p className="font-medium">
+                      {toMeter(inputs.amount, inputs.unit).toLocaleString(
+                        "id-ID",
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}{" "}
+                      m
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Biaya Kain:</span>
+                    <p className="font-medium">
+                      Rp{" "}
+                      {fabricCost(inputs).toLocaleString("id-ID", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      Subtotal {title}:
+                    </span>
+                    <p className="font-bold text-primary">
+                      Rp{" "}
+                      {subtotal(inputs).toLocaleString("id-ID", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
+                    </p>
+                  </div>
+                </div>
               </div>
+            </section>
+          );
+        })}
 
-              {/* ====== Biaya Pengiriman ====== */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Biaya Pengiriman (Rp)
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                  value={formatNumber(inputs.shippingCost, 0)}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = parseNumber(raw);
-                    updateComponent(idx, { shippingCost: parsed });
-                  }}
-                />
-              </div>
+        {/* Button untuk menambah Tambahan Kain */}
+        <div className="flex justify-center">
+          <Button onClick={addComponent} className="px-6 py-3 font-medium">
+            + Tambahan Kain
+          </Button>
+        </div>
 
-              {/* ====== Biaya Sewing ====== */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Biaya Sewing (Rp)
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                  value={formatNumber(inputs.sewingCost, 0)}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = parseNumber(raw);
-                    updateComponent(idx, { sewingCost: parsed });
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* ====== Ringkasan Perhitungan Komponen ====== */}
-            <div className="mt-4 space-y-1">
-              <p>
-                <span className="font-medium">Kebutuhan dalam meter: </span>
-                {toMeter(inputs.amount, inputs.unit).toLocaleString("id-ID", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                m
+        {/* ====== Summary ====== */}
+        <section className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-2xl font-bold text-center">Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card border border-border rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                Total HPP (Semua Komponen)
               </p>
-              <p>
-                <span className="font-medium">Biaya Kain: </span>
+              <p className="text-2xl font-bold text-primary">
                 Rp{" "}
-                {fabricCost(inputs).toLocaleString("id-ID", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
-              </p>
-              <p>
-                <span className="font-medium">Subtotal {title}: </span>
-                Rp{" "}
-                {subtotal(inputs).toLocaleString("id-ID", {
+                {totalHpp.toLocaleString("id-ID", {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
                 })}
               </p>
             </div>
-          </section>
-        );
-      })}
-
-      {/* Button untuk menambah Tambahan Kain */}
-      <button
-        onClick={addComponent}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        + Tambahan Kain
-      </button>
-
-      {/* ====== Summary ====== */}
-      <section className="border rounded-lg p-4 space-y-4">
-        <h2 className="text-xl font-medium">Summary</h2>
-        <p>
-          <span className="font-medium">Total HPP (Semua Komponen): </span>
-          Rp{" "}
-          {totalHpp.toLocaleString("id-ID", {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          })}
-        </p>
-        <p>
-          <span className="font-medium">HPP + 2 %: </span>
-          Rp{" "}
-          {hppPlus2.toLocaleString("id-ID", {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          })}
-        </p>
-      </section>
+            <div className="bg-card border border-border rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">HPP + 2%</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                Rp{" "}
+                {hppPlus2.toLocaleString("id-ID", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 };
